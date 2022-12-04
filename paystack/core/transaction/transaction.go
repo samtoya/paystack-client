@@ -13,10 +13,7 @@ type Client struct {
 	AccessKey string
 }
 
-func (t *Client) Initialize(email string, amount float32) (*common.ApiResponse[dtos.InitializeTransactionDto], error) {
-	req := make(map[string]any)
-	req["email"] = email
-	req["amount"] = fmt.Sprintf("%f", amount)
+func (t *Client) Initialize(req map[string]any) (*common.ApiResponse[dtos.InitializeTransactionDto], error) {
 	body, err := utils.MakePostRequest[common.ApiResponse[dtos.InitializeTransactionDto]](config.InitializeTransactionEndpoint, req)
 	if err != nil {
 		return nil, err
