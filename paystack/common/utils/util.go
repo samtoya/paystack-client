@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/samtoya/paystack-client/paystack/config"
-	"github.com/spf13/viper"
-	"io"
 	"log"
 	"net/http"
+
+	"github.com/samtoya/paystack-client/paystack/config"
+	"github.com/spf13/viper"
 )
 
-func MakeGetRequest(endpoint string) ([]byte, error) {
+func MakeGetRequest[T any](endpoint string) (*T, error) {
 	token, err := validateTokenPresent()
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -29,20 +29,18 @@ func MakeGetRequest(endpoint string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		log.Fatal(err)
+	response := new(T)
+	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+		return nil, err
 	}
 
-	fmt.Println(string(body))
+	defer resp.Body.Close()
 
-	return body, nil
+	return response, nil
 }
 
-func MakePostRequest(endpoint string, payload map[string]any) ([]byte, error) {
+func MakePostRequest[T any](endpoint string, payload map[string]any) (*T, error) {
 	token, err := validateTokenPresent()
 	if err != nil {
 		return nil, err
@@ -57,7 +55,7 @@ func MakePostRequest(endpoint string, payload map[string]any) ([]byte, error) {
 	client := http.Client{}
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	req.Header = http.Header{
-		"Content-Type":  {"application/jsonData"},
+		"Content-Type":  {"application/json"},
 		"Authorization": {fmt.Sprintf("Bearer %s", token)},
 	}
 
@@ -65,12 +63,13 @@ func MakePostRequest(endpoint string, payload map[string]any) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
+	log.Printf("resp status code: %v", resp.StatusCode)
+	response := new(T)
+	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
 		return nil, err
 	}
-
-	return body, nil
+	defer resp.Body.Close()
+	return response, nil
 }
 
 func validateTokenPresent() (string, error) {
